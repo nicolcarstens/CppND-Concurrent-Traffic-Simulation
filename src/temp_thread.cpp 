@@ -1,0 +1,145 @@
+
+#include <iostream>
+#include <thread>
+
+class Vehicle
+{
+public:
+    Vehicle() : _id(0) {}
+    void addID(int id) { _id = id; }
+    void printID()
+    {
+        std::cout << "Vehicle ID=" << _id << std::endl;
+    }
+
+private:
+    int _id;
+};
+
+int main()
+{
+    // create thread
+    Vehicle v1, v2;
+    std::thread t1 = std::thread(&Vehicle::addID, v1, 1); // call member function on object v
+    std::thread t2 = std::thread(&Vehicle::addID, &v2, 2); // call member function on object v
+
+    // wait for thread to finish
+    t1.join();
+    t2.join();
+
+    // print Vehicle id
+    v1.printID();
+    v2.printID();
+
+    return 0;
+}
+
+//=========================
+
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <random>
+#include <vector>
+
+int main()
+{
+    // create threads
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 10; ++i)
+    {
+        // create new thread from a Lambda
+        threads.emplace_back([i]() {
+
+            // wait for certain amount of time
+            std::this_thread::sleep_for(std::chrono::milliseconds(10 * i));
+
+            // perform work
+            std::cout << "Hello from Worker thread #" << i << std::endl;
+        });
+    }
+
+    // do something in main()
+    std::cout << "Hello from Main thread" << std::endl;
+
+    // call join on all thread objects using a range-based loop
+    for (auto &t : threads)
+        t.join();
+
+    return 0;
+}
+//==========================================
+
+#include <iostream>
+#include <thread>
+#include <vector>
+
+void printHello()
+{
+    // perform work
+    std::cout << "Hello from Worker thread #" << std::this_thread::get_id() << std::endl;
+}
+
+int main()
+{
+    // create threads
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 5; ++i)
+    {
+        // copying thread objects causes a compile error
+        /*
+        //std::thread t(printHello);
+        //threads.push_back(t);     // tries to push back with copy constructor 
+        threads.emplace_back(t);    // using move semantics 
+        */
+
+        // moving thread objects will work
+        threads.emplace_back(std::thread(printHello));
+    }
+
+    // do something in main()
+    std::cout << "Hello from Main thread #" << std::this_thread::get_id() << std::endl;
+
+    // call join on all thread objects using a range-based loop
+    for (auto &t : threads)
+        t.join();
+
+    return 0;
+}
+
+//==========================================
+
+#include <iostream>
+#include <thread>
+
+void printMessage(std::string message)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // simulate work
+    std::cout << "Thread 1: " << message << std::endl;
+}
+
+int main()
+{
+    // define message
+    std::string message = "My Message";
+
+    // start thread using variadic templates
+    std::thread t1(printMessage, message);
+
+    // start thread using a Lambda
+    std::thread t2([message] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // simulate work
+        std::cout << "Thread 2: " << message << std::endl;
+    });
+
+    // thread barrier
+    t1.join();
+    t2.join();
+
+    return 0;
+}
+
+
+
+
+
