@@ -12,20 +12,42 @@
 
 int WaitingVehicles::getSize()
 {
-    return _vehicles.size();
+    return _vehiclesWaiting.size();
 }
 
 void WaitingVehicles::pushBack(std::shared_ptr<Vehicle> vehicle, std::promise<void> &&promise)
 {
-    _vehicles.push_back(vehicle);
-    _promises.push_back(std::move(promise));
+    _vehiclesWaiting.push_back(vehicle);
+    _promisesAssociated.push_back(std::move(promise));
 }
+
 
 void WaitingVehicles::permitEntryToFirstInQueue()
 {
+    // Student code START =====================================================
+
+    // method called from Intersection::processVehicleQueue()
+
     // L2.3 : First, get the entries from the front of _promises and _vehicles. 
     // Then, fulfill promise and send signal back that permission to enter has been granted.
     // Finally, remove the front elements from both queues. 
+
+    // I have renamed _vehicles to _vehiclesWaiting
+    //        ... and _promises to _promisesAssociated
+
+    // nothing really to do with the vehicle ... just fulfill the promise?! 
+
+    _promisesAssociated.front().set_value();
+
+    // Finally, remove the front elements from both queues. 
+    // see http://www.cplusplus.com/reference/vector/vector/erase/ 
+    // Given Vector container, it is not a very efficient way to manage data!
+    // List would have been more efficient... 
+
+    _vehiclesWaiting.erase(_vehiclesWaiting.begin());
+    _promisesAssociated.erase(_promisesAssociated.begin());
+
+    // Student code ENDS ======================================================
 }
 
 /* Implementation of class "Intersection" */
@@ -61,15 +83,37 @@ void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
 {
     std::cout << "Intersection #" << _id << "::addVehicleToQueue: thread id = " << std::this_thread::get_id() << std::endl;
 
+    // Student code START =====================================================
+
     // L2.2 : First, add the new vehicle to the waiting line by creating a promise, a corresponding future and then adding both to _waitingVehicles. 
     // Then, wait until the vehicle has been granted entry. 
+
+    // Example: https://en.cppreference.com/w/cpp/thread/promise 
+    //
+    // Demonstrate using promise<int> to transmit a result between threads.
+    // std::vector<int> numbers = { 1, 2, 3, 4, 5, 6 };
+    // std::promise<int> accumulate_promise;
+    // std::future<int> accumulate_future = accumulate_promise.get_future();
+    // std::thread work_thread(accumulate, numbers.begin(), numbers.end(),
+    //                        std::move(accumulate_promise));
+
+    std::promise<void> promiseV;
+    std::future<void> futureV = promiseV.get_future();
+
+    // Definition ==>> WaitingVehicles::pushBack(std::shared_ptr<Vehicle> vehicle, std::promise<void> &&promise)
+    _waitingVehicles.pushBack(vehicle,std::move(promiseV));
+
+    // wait until the vehicle has been granted entry
+    futureV.wait();
+
+    // Student code ENDS ======================================================
 
     std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
 }
 
 void Intersection::vehicleHasLeft(std::shared_ptr<Vehicle> vehicle)
 {
-    //std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " has left." << std::endl;
+    std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " has left." << std::endl;
 
     // unblock queue processing
     this->setIsBlocked(false);
@@ -78,7 +122,7 @@ void Intersection::vehicleHasLeft(std::shared_ptr<Vehicle> vehicle)
 void Intersection::setIsBlocked(bool isBlocked)
 {
     _isBlocked = isBlocked;
-    //std::cout << "Intersection #" << _id << " isBlocked=" << isBlocked << std::endl;
+    std::cout << "Intersection #" << _id << " isBlocked=" << isBlocked << std::endl;
 }
 
 // virtual function which is executed in a thread

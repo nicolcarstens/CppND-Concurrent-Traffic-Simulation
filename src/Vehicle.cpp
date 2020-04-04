@@ -24,7 +24,18 @@ void Vehicle::setCurrentDestination(std::shared_ptr<Intersection> destination)
 
 void Vehicle::simulate()
 {
+    //
     // launch drive function in a thread
+    //
+    // reminder: std::thread t5(&foo::bar, &f); // t5 runs foo::bar() on object f
+    // see: https://en.cppreference.com/w/cpp/thread/thread/thread
+    //
+    // reminder: emplace more efficient (no temp object created)
+    // http://candcplusplus.com/c-difference-between-emplace_back-and-push_back-function 
+    // 
+    // BUT BE CAREFUL: 
+    // https://www.nextptr.com/tutorial/ta1244731691/can-emplace_back-replace-push_back
+    // 
     threads.emplace_back(std::thread(&Vehicle::drive, this));
 }
 
@@ -74,9 +85,24 @@ void Vehicle::drive()
             // check wether halting position in front of destination has been reached
             if (completion >= 0.9 && !hasEnteredIntersection)
             {
+                // Student code START =========================================
+
                 // Task L2.1 : Start up a task using std::async which takes a reference to the method Intersection::addVehicleToQueue, 
                 // the object _currDestination and a shared pointer to this using the get_shared_this() function. 
                 // Then, wait for the data to be available before proceeding to slow down.
+
+                // see https://en.cppreference.com/w/cpp/thread/async for example of using async  
+                //
+                //   adds a new vehicle to the queue and returns once the vehicle is allowed to enter
+                //   void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
+                //   ==>> Thus, call addVehicleToQueue on object _currDestination with value "this-vehicle" as parameter
+
+                auto requestEntry = std::async(&Intersection::addVehicleToQueue,_currDestination,get_shared_this());
+
+                // wait for permission to proceed
+                requestEntry.get();
+
+                // Student code ENDS  =========================================
 
                 // slow down and set intersection flag
                 _speed /= 10.0;
