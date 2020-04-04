@@ -1,5 +1,6 @@
 #include <iostream>
 #include <random>
+#include "TrafficObject.h"
 #include "Street.h"
 #include "Intersection.h"
 #include "Vehicle.h"
@@ -31,10 +32,17 @@ void Vehicle::simulate()
 // virtual function which is executed in a thread
 void Vehicle::drive()
 {
-    // L3.3 : Ensure that the text output locks the console as a shared resource. Use the mutex _mtxCout you have added to the base class TrafficObject in the previous task. 
+    // L3.3 : Ensure that the text output locks the console as a shared resource. 
+    //        Use the mutex _mtxCout you have added to the base class TrafficObject in the previous task. 
+
+    std::unique_lock<std::mutex> lckCout(TrafficObject::_mtxCout);
+    // NOT NECESSARY => lckCout.lock();
 
     // print id of the current thread
     std::cout << "Vehicle #" << _id << "::drive: thread id = " << std::this_thread::get_id() << std::endl;
+
+    // GOOD! 
+    lckCout.unlock();
 
     // initalize variables
     bool hasEnteredIntersection = false;

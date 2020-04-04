@@ -6,7 +6,13 @@
 // init static variable
 int TrafficObject::_idCnt = 0;
 
-// L3.2 : Add a static mutex to the base class TrafficObject (called _mtxCout) and properly instantiate it in the source file. This mutex will be used in the next task to protect standard-out. 
+// L3.2 : Add a static mutex to the base class TrafficObject (called _mtxCout) and properly 
+//        instantiate it in the source file. This mutex will be used in the next task to 
+//        protect standard-out. 
+
+std::mutex TrafficObject::_mtxCout;   //   <<===== WRITE!!!
+
+// std::mutex _mtxCout;               //   <<===== WRONG!!!
 
 void TrafficObject::setPosition(double x, double y)
 {

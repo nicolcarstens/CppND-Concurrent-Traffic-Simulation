@@ -15,17 +15,21 @@
 
 int WaitingVehicles::getSize()
 {
+    std::lock_guard<std::mutex> lck(_mtxPromises);    
     return _vehicles.size();
 }
 
 void WaitingVehicles::pushBack(std::shared_ptr<Vehicle> vehicle, std::promise<void> &&promise)
 {
+    std::lock_guard<std::mutex> lck(_mtxPromises);
     _vehicles.push_back(vehicle);
     _promises.push_back(std::move(promise));
 }
 
 void WaitingVehicles::permitEntryToFirstInQueue()
 {
+    std::lock_guard<std::mutex> lck(_mtxPromises);
+
     // get entries from the front of both queues
     auto firstPromise = _promises.begin();
     auto firstVehicle = _vehicles.begin();
@@ -69,9 +73,19 @@ std::vector<std::shared_ptr<Street>> Intersection::queryStreets(std::shared_ptr<
 // adds a new vehicle to the queue and returns once the vehicle is allowed to enter
 void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
 {
-    // L3.3 : Ensure that the text output locks the console as a shared resource. Use the mutex _mtxCout you have added to the base class TrafficObject in the previous task. Make sure that in between the two calls to std-cout at the beginning and at the end of addVehicleToQueue the lock is not held. 
+    // L3.3 : Ensure that the text output locks the console as a shared resource. 
+    //        Use the mutex _mtxCout you have added to the base class TrafficObject 
+    //        in the previous task. Make sure that in between the two calls to std-cout 
+    //        at the beginning and at the end of addVehicleToQueue the lock is not held. 
+
+    std::unique_lock<std::mutex> lckCout(TrafficObject::_mtxCout);
+ 
+    // NO: already locked ... don't do this: lckCout.lock();
 
     std::cout << "Intersection #" << _id << "::addVehicleToQueue: thread id = " << std::this_thread::get_id() << std::endl;
+
+    // Don't want to get stuck here all the time! Move on. Just protect printing...
+    lckCout.unlock();
 
     // add new vehicle to the end of the waiting line
     std::promise<void> prmsVehicleAllowedToEnter;
@@ -80,6 +94,7 @@ void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
 
     // wait until the vehicle is allowed to enter
     ftrVehicleAllowedToEnter.wait();
+    lckCout.lock();
     std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
 }
 
