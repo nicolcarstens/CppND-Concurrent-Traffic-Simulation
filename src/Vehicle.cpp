@@ -41,14 +41,14 @@ void Vehicle::drive()
     double cycleDuration = 1; // duration of a single simulation cycle in ms
     std::chrono::time_point<std::chrono::system_clock> lastUpdate;
 
-    // init stop watch
+    // STEP 1: init stop watch
     lastUpdate = std::chrono::system_clock::now();
     while (true)
     {
         // sleep at every iteration to reduce CPU usage
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-        // compute time difference to stop watch
+        // STEP 2: compute time difference to stop watch
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         if (timeSinceLastUpdate >= cycleDuration)
         {

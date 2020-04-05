@@ -50,6 +50,25 @@ void TrafficLight::simulate()
 {
     // FP.2b : Finally, the private method „cycleThroughPhases“ should be started in a thread when 
     //         the public method „simulate“ is called. To do this, use the thread queue in the base class. 
+
+    // launch drive function in a thread
+    // NC Note: threads is a protected variable in TrafficObject base class, just like in Vehicle
+    //          We are calling the cycleThroughPhases() private member method on "this" TrafficLight 
+    threads.emplace_back(std::thread(&TrafficLight::cycleThroughPhases, this));    
+}
+
+// Generate a positive integer number between minOut and maxOut, cast to a double
+// Based on code example: https://en.cppreference.com/w/cpp/numeric/random/uniform_int_distribution
+double randomTimeInMS(int minOut, int maxOut){
+    if ((minOut > 0) && (maxOut > 0) && (minOut<10000) && (maxOut<10000) && (minOut<maxOut))
+    {
+        std::random_device rd;  //Will be used to obtain a seed for the random number engine
+        std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+        std::uniform_int_distribution<> dis(minOut, maxOut);
+        return (double)dis(gen);
+    }
+    // if input is invalid, return 5 seconds => 5000 ms 
+    return 5000.0;
 }
 
 // virtual function which is executed in a thread
@@ -57,6 +76,43 @@ void TrafficLight::cycleThroughPhases()
 {
     // FP.2a : Implement the function with an infinite loop that measures the time between two loop cycles 
     // and toggles the current phase of the traffic light between red and green and sends an update method 
-    // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
+    // to the message queue using move semantics. The cycle duration should be a random value between 4-6s. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
+
+    // NC Notes
+    // -> The Vehicle also runs an infinite loop. We will base this on code from Vehicle. 
+    // -> Compare states (STEPs/BLOCKs) with that of the Vehicle::drive() loop
+
+    // initalize variables
+    // should we start the light green or red??
+    double cycleDuration = randomTimeInMS(4000,6000);; // duration of a single simulation cycle in ms
+    std::chrono::time_point<std::chrono::system_clock> lastUpdate;
+
+    // STEP/BLOCK 1: init stop watch
+    lastUpdate = std::chrono::system_clock::now();
+    while (true)
+    {
+        // sleep at every iteration to reduce CPU usage
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        // STEP/BLOCK 2:  compute time difference to stop watch
+        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
+        if (timeSinceLastUpdate >= cycleDuration)
+        {
+            // STEP/BLOCK 3: toggle between red and green 
+
+
+
+            // STEP/BLOCK 4: send update message to queue, that is to inform the intersection
+            //               that the light is now green or red and thus cars can be allowed, or not!
+
+
+
+            // STEP/BLOCK 5: reset stop watch for next cycle
+            lastUpdate = std::chrono::system_clock::now();
+            
+            // assign a new random value between 4s and 6s for next cycle duration 
+            cycleDuration = randomTimeInMS(4000,6000);
+        }
+    } // eof simulation loop
 }

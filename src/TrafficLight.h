@@ -38,7 +38,8 @@ class TrafficLight : public TrafficObject
 public:
     // constructor / desctructor
     TrafficLight();
-    ~TrafficLight();
+
+    // NC NO NEED ?? ~TrafficLight();
 
     // getters / setters
     TrafficLightPhase getCurrentPhase();
