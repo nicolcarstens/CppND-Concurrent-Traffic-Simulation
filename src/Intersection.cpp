@@ -86,14 +86,17 @@ void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
     lck.lock();
     std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
     
+    lck.unlock();
+
     // FP.6b : use the methods TrafficLight::getCurrentPhase and 
     //         TrafficLight::waitForGreen to block the execution until the traffic light turns green.
 
-    // FP6b.1 : TODO : use the methods TrafficLight::getCurrentPhase and 
-    // FP6b.2 : TODO : TrafficLight::waitForGreen to block the execution until the traffic light turns green.
+    // FP6b.1 : DONE : use the methods TrafficLight::getCurrentPhase and 
+    // FP6b.2 : DONE : TrafficLight::waitForGreen to block the execution until the traffic light turns green.
 
-
-    lck.unlock();
+    if (_trafficLight.getCurrentPhase() == TrafficLightPhase::red){
+        _trafficLight.waitForGreen();
+    }
 }
 
 void Intersection::vehicleHasLeft(std::shared_ptr<Vehicle> vehicle)
@@ -116,10 +119,11 @@ void Intersection::simulate() // using threads + promises/futures + exceptions
     // FP.6a : In Intersection.h, add a private member _trafficLight of type TrafficLight. 
     //         At this position, start the simulation of _trafficLight.
 
-    // FP6a.1 : TODO : In Intersection.h, add a private member _trafficLight of type TrafficLight. 
-    // FP6a.1 : TODO : At this position, start the simulation of _trafficLight.
+    // FP6a.1 : DONE : In Intersection.h, add a private member _trafficLight of type TrafficLight. 
+    // FP6a.1 : DONE : At this position, start the simulation of _trafficLight.
 
-
+    _trafficLight.simulate();
+  
     // launch vehicle queue processing in a thread
     threads.emplace_back(std::thread(&Intersection::processVehicleQueue, this));
 }
@@ -150,12 +154,12 @@ void Intersection::processVehicleQueue()
 bool Intersection::trafficLightIsGreen()
 {
    // please include this part once you have solved the final project tasks
-   /*
+   
    if (_trafficLight.getCurrentPhase() == TrafficLightPhase::green)
        return true;
    else
        return false;
-   */
+   
 
   return true; // makes traffic light permanently green
 } 
