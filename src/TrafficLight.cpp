@@ -2,44 +2,69 @@
 #include <random>
 #include "TrafficLight.h"
 
-/* Implementation of class "MessageQueue" */
+/* Implementation of class "c" */
 
 
-template <typename T>
-T MessageQueue<T>::receive()
+template <typename TrafficLightPhase>
+TrafficLightPhase MessageQueue<TrafficLightPhase>::receive()
 {
     // FP.5a : The method receive should use std::unique_lock<std::mutex> and _condition.wait() 
     // to wait for and receive new messages and pull them from the queue using move semantics. 
     // The received object should then be returned by the receive function. 
 
-    // FP5a.1: TODO: The method receive should use std::unique_lock<std::mutex> and 
-    // FP5a.2: TODO: _condition.wait() to wait for and receive new messages 
-    // FP5a.3: TODO: and pull them from the queue using move semantics. 
-    // FP5a.4: TODO: The received object should then be returned by the receive function. 
+    // FP5a.1: DONE: The method receive should use std::unique_lock<std::mutex> and 
+    // FP5a.2: DONE: _condition.wait() to wait for and receive new messages 
+    // FP5a.3: DONE: and pull them from the queue using move semantics. 
+    // FP5a.4: DONE: The received object should then be returned by the receive function. 
 
-    // std::unique_lock<std::mutex>
-    // _condition.wait() 
+    // Based on example privided "in class"
+
+    // perform queue modification under the lock
+    std::unique_lock<std::mutex> uLock(_mutexMsgQ);
+    
+    // pass unique lock to condition variable
+    // I am not going to use the "shorthand" -> I am writing it out for clarity
+    // _cond.wait(uLock, [this] { return !_queue.empty(); }); 
+
+    while (_queue.empty()){
+        _conditionMsgQ.wait(uLock);
+    }
+
+    // remove last vector element from queue
+    // see https://en.cppreference.com/w/cpp/container/deque
+    TrafficLightPhase msg = std::move(_queue.front());
+    _queue.pop_front();
+
+    return msg; // will not be copied due to return value optimization (RVO) in C++
 }
 
-template <typename T>
-void MessageQueue<T>::send(T &&msg)
+template <typename TrafficLightPhase>
+void MessageQueue<TrafficLightPhase>::send(TrafficLightPhase &&msg)
 {
     // FP.4a : The method send should use the mechanisms std::lock_guard<std::mutex> 
     // as well as _condition.notify_one() to add a new message to the queue and afterwards send a notification.
 
-    // FP4a.1: TODO: The method send should use the mechanisms std::lock_guard<std::mutex> 
-    // FP4a.2: TODO: as well as _condition.notify_one() to add a new message to the queue 
-    // FP4a.3: TODO: and afterwards send a notification.
+    // FP4a.1: DONE: The method send() should use the mechanisms std::lock_guard<std::mutex> 
+    // FP4a.2: DONE: as well as _condition.notify_one() to add a new message to the queue 
+    // FP4a.3: DONE: and afterwards send a notification.
 
-    // std::lock_guard<std::mutex> 
-    // _condition.notify_one()
+    // Based on example privided "in class"
+
+    // perform vector modification under the lock
+    std::lock_guard<std::mutex> uLock(_mutexMsgQ);
+
+    // add vector to queue
+    // std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
+    _queue.push_back(std::move(msg)); // TODO: push_back fine?
+    _conditionMsgQ.notify_one();      // notify client after pushing new Vehicle into vector
 }
 
 /* Implementation of class "TrafficLight" */
 
 TrafficLight::TrafficLight()
 {
-    _currentPhase = TrafficLightPhase::red;
+    _currentPhase = TrafficLightPhase::red; // NC Note: initializing all lights to red? 
+                                            // Don't think I wrote this :-) But makes sense.
 }
 
 void TrafficLight::waitForGreen()
@@ -48,11 +73,17 @@ void TrafficLight::waitForGreen()
     // runs and repeatedly calls the receive function on the message queue. 
     // Once it receives TrafficLightPhase::green, the method returns.
 
-    // FP5b.1: TODO: add the implementation of the method waitForGreen, 
-    // FP5b.2: TODO: in which an infinite while-loop runs and 
-    // FP5b.3: TODO: repeatedly calls the receive function on the message queue. 
-    // FP5b.4: TODO: Once it receives TrafficLightPhase::green, the method returns.
+    // FP5b.1: DONE: add the implementation of the method waitForGreen, 
+    // FP5b.2: DONE: in which an infinite while-loop runs and 
+    // FP5b.3: DONE: repeatedly calls the receive function on the message queue. 
+    // FP5b.4: DONE: Once it receives TrafficLightPhase::green, the method returns.
 
+    while (true){
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (_msgQueue->receive() == TrafficLightPhase::green){
+            return;
+        }
+    }
 }
 
 TrafficLightPhase TrafficLight::getCurrentPhase()
@@ -96,11 +127,11 @@ void TrafficLight::cycleThroughPhases()
     // to the message queue using move semantics. The cycle duration should be a random value between 4-6s. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
 
-    // FP2a.1: TODO: Implement the function with an infinite loop that measures the time between two loop cycles 
-    // FP2a.2: TODO: and toggles the current phase of the traffic light between red and green 
-    // FP2a.3: TODO: and sends an update method to the message queue using move semantics. 
-    // FP2a.4: TODO: The cycle duration should be a random value between 4-6s. 
-    // FP2a.5: TODO: the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
+    // FP2a.1: DONE: Implement the function with an infinite loop that measures the time between two loop cycles 
+    // FP2a.2: DONE: and toggles the current phase of the traffic light between red and green 
+    // FP2a.3: DONE: and sends an update method to the message queue using move semantics. 
+    // FP2a.4: DONE: The cycle duration should be a random value between 4-6s. 
+    // FP2a.5: DONE: the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
 
     // NC Notes
     // -> The Vehicle also runs an infinite loop. We will base this on code from Vehicle. 
@@ -122,14 +153,20 @@ void TrafficLight::cycleThroughPhases()
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            // STEP/BLOCK 3: toggle between red and green 
+            // STEP/BLOCK 3: toggle between red and green (FP2a.2)
+            // I don't think In need to protect it... It is private.
+            if (_currentPhase == TrafficLightPhase::green){
+                _currentPhase = TrafficLightPhase::red;
+            } else {
+                _currentPhase = TrafficLightPhase::green;
+            }
 
-
-
-            // STEP/BLOCK 4: send update message to queue, that is to inform the intersection
+            // STEP/BLOCK 4: send update message to queue, that is to inform the intersection (FP2a.3 + FP4b.2)
             //               that the light is now green or red and thus cars can be allowed, or not!
-
-
+            TrafficLightPhase message = _currentPhase;
+            // see https://en.cppreference.com/w/cpp/thread/async
+            auto future = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, _msgQueue, std::move(message));
+            future.wait();
 
             // STEP/BLOCK 5: reset stop watch for next cycle
             lastUpdate = std::chrono::system_clock::now();
