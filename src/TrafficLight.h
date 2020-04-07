@@ -1,3 +1,17 @@
+/******************************************************************************
+*
+*  Udacity Nanodegree in C++
+*  Concurrent Traffic Simulation - Project 4 
+*
+*  Work done by Nicol Carstens, March/April 2020
+*  Baseline code provided by udacity.com
+*
+*  Status: ready to submit (7 April 2020)
+*
+*  Copyright: Nicol Carstens & Udacity 2020
+*
+******************************************************************************/
+
 #ifndef TRAFFICLIGHT_H
 #define TRAFFICLIGHT_H
 
@@ -6,7 +20,7 @@
 #include <condition_variable>
 #include "TrafficObject.h"
 
-// forward declarations to avoid include cycle
+// forward declarations to avoid include loop
 class Vehicle;
 
 enum class TrafficLightPhase {red = 1, green};

@@ -1,8 +1,21 @@
+/******************************************************************************
+*
+*  Udacity Nanodegree in C++
+*  Concurrent Traffic Simulation - Project 4 
+*
+*  Work done by Nicol Carstens, March/April 2020
+*  Baseline code provided by udacity.com
+*
+*  Status: ready to submit (7 April 2020)
+*
+*  Copyright: Nicol Carstens & Udacity 2020
+*
+******************************************************************************/
+
 #include <iostream>
 #include "Vehicle.h"
 #include "Intersection.h"
 #include "Street.h"
-
 
 Street::Street()
 {

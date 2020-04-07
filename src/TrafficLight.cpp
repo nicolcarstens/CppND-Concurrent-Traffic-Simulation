@@ -1,3 +1,17 @@
+/******************************************************************************
+*
+*  Udacity Nanodegree in C++
+*  Concurrent Traffic Simulation - Project 4 
+*
+*  Work done by Nicol Carstens, March/April 2020
+*  Baseline code provided by udacity.com
+*
+*  Status: ready to submit (7 April 2020)
+*
+*  Copyright: Nicol Carstens & Udacity 2020
+*
+******************************************************************************/
+
 #include <iostream>
 #include <random>
 #include "TrafficLight.h"
@@ -27,7 +41,7 @@ TrafficLightPhase MessageQueue<TrafficLightPhase>::receive()
     // LONG VERSION... 
 
     while (_queue.empty()){
-        _condition.wait(uLock);  // 
+        _condition.wait(uLock);
     }    
 
     // remove last vector element from queue
@@ -61,15 +75,14 @@ void MessageQueue<TrafficLightPhase>::send(TrafficLightPhase &&msg)
 
     // add vector to queue
     _queue.push_back(std::move(msg));   // Careful with back vs front for this project ... 
-    _condition.notify_one();           // notify client after pushing new Vehicle into vector
+    _condition.notify_one();            // notify client after pushing new Vehicle into vector
 }
 
 /* Implementation of class "TrafficLight" */
 
 TrafficLight::TrafficLight()
 {
-    _currentPhase = TrafficLightPhase::red; // NC Note: initializing all lights to red? 
-                                            // Don't think I wrote this :-) But makes sense.
+    _currentPhase = TrafficLightPhase::red;
 
     _msgQueue = std::make_shared<MessageQueue<TrafficLightPhase>>();
 }
@@ -129,16 +142,17 @@ void TrafficLight::simulate()
 
 // Generate a positive integer number between minOut and maxOut, cast to a double
 // Based on code example: https://en.cppreference.com/w/cpp/numeric/random/uniform_int_distribution
-double randomTimeInMS(int minOut, int maxOut){
+long randomTimeInMS(const long & minOut, const long & maxOut)
+{
     if ((minOut > 0) && (maxOut > 0) && (minOut<10000) && (maxOut<10000) && (minOut<maxOut))
     {
         std::random_device rd;  //Will be used to obtain a seed for the random number engine
         std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
         std::uniform_int_distribution<> dis(minOut, maxOut);
-        return (double)dis(gen);
+        return (long)dis(gen);
     }
-    // if input is invalid, return 5 seconds => 5000 ms 
-    return 5000.0;
+
+    return 5000;  // if input is invalid, return 5 seconds => 5000 ms 
 }
 
 // virtual function which is executed in a thread
@@ -160,8 +174,7 @@ void TrafficLight::cycleThroughPhases()
     // -> Compare states (STEPs/BLOCKs) with that of the Vehicle::drive() loop
 
     // initalize variables
-    // should we start the light green or red??
-    double cycleDuration = randomTimeInMS(4000,6000);; // duration of a single simulation cycle in ms
+    long cycleDuration = randomTimeInMS(4000,6000);; // duration of a single simulation cycle in ms
     std::chrono::time_point<std::chrono::system_clock> lastUpdate;
 
     // STEP/BLOCK 1: init stop watch
@@ -176,11 +189,9 @@ void TrafficLight::cycleThroughPhases()
         if (timeSinceLastUpdate >= cycleDuration)
         {
             // STEP/BLOCK 3: toggle between red and green (FP2a.2)
-            // I don't think In need to protect it... It is private? That's how many great bugs are design: bad assumptions!
-
+            // we know that message is of enum type TrafficLightPhase, but I do not use auto enough! 
+            // and from return type of getCurrentPhase() very clear what we dealing with ... 
             auto message = getCurrentPhase();   // read phase only once ... 
-                                                // we know that message is of enum type TrafficLightPhase, but I do not use auto enough! 
-                                                // and from return type of getCurrentPhase() very clear what we dealing with ... 
 
             if (message == TrafficLightPhase::red){
                 message = TrafficLightPhase::green;
