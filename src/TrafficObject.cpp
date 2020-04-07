@@ -6,7 +6,8 @@
 // init static variable
 int TrafficObject::_idCnt = 0;
 
-std::mutex TrafficObject::_mtx;
+std::mutex TrafficObject::_mutexCout;  // _mtx and _mutex => horrible names! ensures confusion
+                                       // replaced _mtx with _mutexCout
 
 void TrafficObject::setPosition(double x, double y)
 {

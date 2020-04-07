@@ -1,16 +1,15 @@
 #ifndef TRAFFICLIGHT_H
 #define TRAFFICLIGHT_H
 
-#include <future>
 #include <mutex>
 #include <deque>
 #include <condition_variable>
 #include "TrafficObject.h"
 
-enum TrafficLightPhase {red, green};
-
 // forward declarations to avoid include cycle
 class Vehicle;
+
+enum class TrafficLightPhase {red = 1, green};
 
 // FP.3 Define a class „MessageQueue“ which has the public methods send and receive. 
 // Send should take an rvalue reference of type TrafficLightPhase whereas receive should return this type. 
@@ -30,11 +29,15 @@ public:
     void send(TrafficLightPhase &&msg);
 
 private:
-    std::condition_variable _conditionMsgQ;
-    std::mutex _mutexMsgQ;
+    std::condition_variable _condition;   // generally i hate it when there are multiple declarations with different scope
+    std::mutex _mutexMsgQ;                // for variables named _mutex or _condition or lock ... Will allow _condition 
+                                          // since the name was used in the instruction, but _mutex already used in 
+                                          // in class Intersection, so make this on _mutexMsgQ to avoid confusion 
 
     // dequeue better than vector for push FIFO!! 
     // see https://en.cppreference.com/w/cpp/container/deque
+    // NB: But there is a problem with the project design. It is a STUPID idea to keep track of all of the changes of the 
+    //     traffic lights?!? And it causes a problem of a growing queue that serves no purpuse. This becomes silly. 
     std::deque<TrafficLightPhase> _queue;
 };
 
@@ -57,10 +60,36 @@ class TrafficLight : public TrafficObject
 {
 public:
     // constructor / desctructor
-    TrafficLight();
+    //
+    // ... but if you define destructor ... then Rule of 3 ... and then Rule of 5?!
+    // 
+    // class_name ( const class_name & ) = delete; 	
+    // https://en.cppreference.com/w/cpp/language/copy_constructor
+    // 
+    // class_name ( class_name && ) = delete;
+    // https://en.cppreference.com/w/cpp/language/move_constructor
+    // 
+    // class_name & class_name :: operator= ( class_name && ) = delete;
+    // https://en.cppreference.com/w/cpp/language/move_assignment
+    //
+    // class_name & class_name :: operator= ( const class_name & ) = delete; 	
+    // https://en.cppreference.com/w/cpp/language/copy_assignment    
+
+
+    TrafficLight();                 // 0: vanilla constructor => we write! 
+
+    ~ TrafficLight () = default;    // 1: destructor => default fine! No no significant resources 
+                                    //    to release unlike, for example, ~TrafficObject()
+ 
+    TrafficLight ( const TrafficLight & ) = delete;               // 2: copy constructor 
+    TrafficLight ( TrafficLight && ) = delete;                    // 3: move constructor 
+
+    TrafficLight &  operator= ( const TrafficLight & ) = delete;  // 4: copy assignment 
+    TrafficLight &  operator= ( TrafficLight && ) = delete;       // 5: move assignment 
 
     // getters / setters
-    TrafficLightPhase getCurrentPhase();
+    TrafficLightPhase getCurrentPhase() const;
+    void setCurrentPhase(const TrafficLightPhase & newPhase);
 
     // typical behaviour methods
     void waitForGreen();
@@ -70,10 +99,8 @@ private:
     // typical behaviour methods
     void cycleThroughPhases();
 
-    std::mutex _mutex;                    // from FP5a.1
-    std::condition_variable _condition;   // from FP5a.2
-
     TrafficLightPhase _currentPhase;      // TrafficLightPhase::red/green
+                                          // No protective mutex required?
 
     // FP.4b : create a private member of type MessageQueue for messages of type TrafficLightPhase 
     // and use it within the infinite loop to push each new TrafficLightPhase into it by calling 

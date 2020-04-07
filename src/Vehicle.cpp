@@ -12,7 +12,6 @@ Vehicle::Vehicle()
     _speed = 400; // m/s
 }
 
-
 void Vehicle::setCurrentDestination(std::shared_ptr<Intersection> destination)
 {
     // update destination
@@ -32,7 +31,8 @@ void Vehicle::simulate()
 void Vehicle::drive()
 {
     // print id of the current thread
-    std::unique_lock<std::mutex> lck(_mtx);
+    // _mutexCout used to protect console output, thus the name from _mtx to _mutexCout 
+    std::unique_lock<std::mutex> lck(_mutexCout);
     std::cout << "Vehicle #" << _id << "::drive: thread id = " << std::this_thread::get_id() << std::endl;
     lck.unlock();
 
@@ -96,6 +96,7 @@ void Vehicle::drive()
                 if (streetOptions.size() > 0)
                 {
                     // pick one street at random and query intersection to enter this street
+                    // good example of using random function for later use in random time from 4 - 6 seconds ... 
                     std::random_device rd;
                     std::mt19937 eng(rd());
                     std::uniform_int_distribution<> distr(0, streetOptions.size() - 1);

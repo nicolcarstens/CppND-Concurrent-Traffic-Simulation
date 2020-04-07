@@ -24,9 +24,9 @@ public:
     void permitEntryToFirstInQueue();
 
 private:
-    std::vector<std::shared_ptr<Vehicle>> _vehicles;          // list of all vehicles waiting to enter this intersection
-    std::vector<std::promise<void>> _promises; // list of associated promises
-    std::mutex _mutex;
+    std::vector<std::shared_ptr<Vehicle>> _vehicles;   // list of all vehicles waiting to enter this intersection
+    std::vector<std::promise<void>> _promises;         // list of associated promises
+    std::mutex _mutex;                                 // I do not like just the duplicate use of name "_mutex"!! Fixed it elsehwere...
 };
 
 class Intersection : public TrafficObject
@@ -53,8 +53,8 @@ private:
 
     // private members
     std::vector<std::shared_ptr<Street>> _streets;   // list of all streets connected to this intersection
-    WaitingVehicles _waitingVehicles; // list of all vehicles and their associated promises waiting to enter the intersection
-    bool _isBlocked;                  // flag indicating wether the intersection is blocked by a vehicle
+    WaitingVehicles _waitingVehicles;                // list of all vehicles and their associated promises waiting to enter the intersection
+    bool _isBlocked;                                 // flag indicating wether the intersection is blocked by a vehicle
 
     // FP6a.1 : In Intersection.h, add a private member _trafficLight of type TrafficLight.
     TrafficLight _trafficLight; 

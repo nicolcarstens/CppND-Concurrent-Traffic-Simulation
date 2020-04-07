@@ -4,7 +4,6 @@
 
 /* Implementation of class "c" */
 
-
 template <typename TrafficLightPhase>
 TrafficLightPhase MessageQueue<TrafficLightPhase>::receive()
 {
@@ -24,16 +23,23 @@ TrafficLightPhase MessageQueue<TrafficLightPhase>::receive()
     
     // pass unique lock to condition variable
     // I am not going to use the "shorthand" -> I am writing it out for clarity
-    // _cond.wait(uLock, [this] { return !_queue.empty(); }); 
+    // SHORT VERSION: _condition.wait(uLock, [this] { return !_queue.empty(); }); 
+    // LONG VERSION... 
 
     while (_queue.empty()){
-        _conditionMsgQ.wait(uLock);
-    }
+        _condition.wait(uLock);  // 
+    }    
 
     // remove last vector element from queue
     // see https://en.cppreference.com/w/cpp/container/deque
-    TrafficLightPhase msg = std::move(_queue.front());
-    _queue.pop_front();
+    
+    // NB: use .back() not .front() =>> want the latest one ... this is not good ... more on this later!
+    // 'BAD but functional'DEBUG CODE: 
+    //  std::cout << "F = " << _queue.front() << " B = " << _queue.back() << std::endl;
+    
+    TrafficLightPhase msg = std::move(_queue.back());
+
+    _queue.clear();
 
     return msg; // will not be copied due to return value optimization (RVO) in C++
 }
@@ -54,9 +60,8 @@ void MessageQueue<TrafficLightPhase>::send(TrafficLightPhase &&msg)
     std::lock_guard<std::mutex> uLock(_mutexMsgQ);
 
     // add vector to queue
-    // std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
-    _queue.push_back(std::move(msg)); // TODO: push_back fine?
-    _conditionMsgQ.notify_one();      // notify client after pushing new Vehicle into vector
+    _queue.push_back(std::move(msg));   // Careful with back vs front for this project ... 
+    _condition.notify_one();           // notify client after pushing new Vehicle into vector
 }
 
 /* Implementation of class "TrafficLight" */
@@ -65,6 +70,8 @@ TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red; // NC Note: initializing all lights to red? 
                                             // Don't think I wrote this :-) But makes sense.
+
+    _msgQueue = std::make_shared<MessageQueue<TrafficLightPhase>>();
 }
 
 void TrafficLight::waitForGreen()
@@ -86,9 +93,24 @@ void TrafficLight::waitForGreen()
     }
 }
 
-TrafficLightPhase TrafficLight::getCurrentPhase()
+TrafficLightPhase TrafficLight::getCurrentPhase() const 
 {
+    // Should we not protect this with a lock? More than one thread could ask for the status of the light.
+    // One intersection has one light at this time ... So as long as multiple cars in multiple threads as
+    // update from each intersection and not directly from the light, I guess we good ... 
+    // One Intersection from multiple threads could however ask for the information?
+
     return _currentPhase;
+}
+
+void TrafficLight::setCurrentPhase(const TrafficLightPhase & newPhase)
+{
+    // Should we not protect this with a lock? More than one thread could ask for the status of the light.
+    // One intersection has one light at this time ... So as long as multiple cars in multiple threads as
+    // update from each intersection and not directly from the light, I guess we good ... 
+    // One Intersection from multiple threads could however ask for the information?
+
+    _currentPhase = newPhase;
 }
 
 void TrafficLight::simulate()
@@ -154,24 +176,28 @@ void TrafficLight::cycleThroughPhases()
         if (timeSinceLastUpdate >= cycleDuration)
         {
             // STEP/BLOCK 3: toggle between red and green (FP2a.2)
-            // I don't think In need to protect it... It is private.
-            if (_currentPhase == TrafficLightPhase::green){
-                _currentPhase = TrafficLightPhase::red;
+            // I don't think In need to protect it... It is private? That's how many great bugs are design: bad assumptions!
+
+            auto message = getCurrentPhase();   // read phase only once ... 
+                                                // we know that message is of enum type TrafficLightPhase, but I do not use auto enough! 
+                                                // and from return type of getCurrentPhase() very clear what we dealing with ... 
+
+            if (message == TrafficLightPhase::red){
+                message = TrafficLightPhase::green;
             } else {
-                _currentPhase = TrafficLightPhase::green;
+                message = TrafficLightPhase::red;
             }
+            setCurrentPhase(message);           // write phase only once ... 
 
             // STEP/BLOCK 4: send update message to queue, that is to inform the intersection (FP2a.3 + FP4b.2)
             //               that the light is now green or red and thus cars can be allowed, or not!
-            TrafficLightPhase message = _currentPhase;
-            // see https://en.cppreference.com/w/cpp/thread/async
-            auto future = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, _msgQueue, std::move(message));
-            future.wait();
+            _msgQueue->send(std::move(message));
 
             // STEP/BLOCK 5: reset stop watch for next cycle
             lastUpdate = std::chrono::system_clock::now();
             
             // assign a new random value between 4s and 6s for next cycle duration 
+            // guess I could have done this in a less complicated way ... but this looks clear?!
             cycleDuration = randomTimeInMS(4000,6000);
         }
     } // eof simulation loop
